@@ -1,5 +1,6 @@
 from docker import from_env
 
+
 containers = from_env().containers
 package_name = "HAredisPy"
 
@@ -54,6 +55,32 @@ class redisSetup:
         return containerSetups
 
     @staticmethod
+    def getContPort(container):
+        return container.attrs.get('HostConfig').get('PortBindings').get('6379/tcp')[0].get('HostPort')
+
+    @staticmethod
+    def getSetupPorts(setupName):
+        # get containers
+        setupConts = redisSetup.getSetup(setupName).getContainers()
+        # get ports used by the setup
+        setupPorts = [redisSetup.getContPort(container) for container in setupConts]
+        return setupPorts
+    
+    @staticmethod
+    def getOccupiedPorts():
+        runningContainers = containers.list()
+        occPorts = [redisSetup.getContPort(container) for container in runningContainers]
+        return occPorts
+
+    @staticmethod
+    def checkPortsValidity(ports):
+        for port in ports:
+            if port in redisSetup.getOccupiedPorts():
+                print("Ports are already in use")
+                return False
+        return True
+    
+    @staticmethod
     def getSetup(name):
         return redisSetup.getAllSetups().get(name)
 
@@ -61,6 +88,9 @@ class redisSetup:
     def setupExists(name):
         return name in redisSetup.getAllSetups().keys()
 
+    def getContainers(self):
+        return self.containers
+    
     def startSetup(self):
         for container in self.containers:
             container.start()

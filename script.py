@@ -97,32 +97,43 @@ def main():
 
     client = docker.from_env()
     containers = client.containers
+    command = args.command
 
     ######################################################################################
     #################################### Execution #######################################
     ######################################################################################
 
-    if args.command == "run":
+    if command == "run":
 
         setupName = args.name
         redis_version = f"redis:{args.version}"
-
+        ports = args.port
         if redisSetup.setupExists(setupName):
             raise Exception("Setup already exists. Pick another name.")
-        redisSetup.createRedisSetup(redis_version, setupName, args.port)
+        if redisSetup.checkPortsValidity(ports):
+            raise Exception("Ports are already in use")
+        
+        redisSetup.createRedisSetup(redis_version, setupName, ports)
 
-    elif args.command == "start":
+    elif command == "start":
         setupName = args.name
+        
         if redisSetup.setupExists(setupName):
-            redisSetup.getSetup(setupName).startSetup()
-
-    elif args.command == "stop":
+            # get ports used by the setup
+            setupPorts = redisSetup.getSetupPorts(setupName)
+            
+            # start setup if ports are not occupied
+            if redisSetup.checkPortsValidity(setupPorts):
+                redisSetup.getSetup(setupName).startSetup()
+            
+    elif command == "stop":
         setupName = args.name
         if redisSetup.setupExists(setupName):
             redisSetup.getSetup(setupName).stopSetup()
 
-    elif args.command == "status":
+    elif command == "status":
         print(redisSetup.getAllSetups())
+        
 
 
 if __name__ == "__main__":
